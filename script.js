@@ -8,6 +8,8 @@ function initMap() {
     console.error('Leaflet library not loaded');
     alert('Грешка: Картата не е заредена. Проверете интернет връзката.');
     return;
+
+    setTimeout(initGeocoder, 100);
   }
 
   // Ensure map container exists and has dimensions
@@ -33,43 +35,36 @@ function initMap() {
   // Show initial coords
   document.getElementById('coordsDisplay').textContent =
     `${CENTER_RUSE[0].toFixed(5)}, ${CENTER_RUSE[1].toFixed(5)}`
-    // Инициализирай autocomplete след като картата е готова
-  setTimeout(initAutocomplete, 100);;
+    
+  // -------- LEAFLET GEOCODER INTEGRATION --------
+let geocoder;
+let searchTimeout;
 
-    // -------- AUTOCOMPLETE ФУНКЦИОНАЛНОСТ --------
-let autocompleteTimeout;
-
-function initAutocomplete() {
+function initGeocoder() {
+  // Инициализирай Leaflet Geocoder
+  geocoder = L.Control.Geocoder.nominatim();
+  
   const addressInput = document.getElementById('address');
-  const resultsContainer = document.getElementById('autocomplete-results');
-
+  const resultsContainer = document.getElementById('search-results');
+  
   if (!addressInput || !resultsContainer) return;
-
+  
   addressInput.addEventListener('input', function(e) {
     const query = e.target.value.trim();
     
-    // Изчисти предишен timeout
-    clearTimeout(autocompleteTimeout);
+    clearTimeout(searchTimeout);
     
-    // Скрий резултатите ако няма текст
-    if (query.length < 2) {
+    if (query.length < 3) {
       resultsContainer.style.display = 'none';
       return;
     }
-
-    // Дебounce - изчакай 300ms след последното въвеждане
-    autocompleteTimeout = setTimeout(async () => {
-      try {
-        const results = await searchAddresses(query);
-        displayAutocompleteResults(results);
-      } catch (error) {
-        console.error('Autocomplete error:', error);
-        resultsContainer.style.display = 'none';
-      }
+    
+    searchTimeout = setTimeout(() => {
+      searchWithGeocoder(query, resultsContainer);
     }, 300);
   });
-
-  // Скрий резултатите при клик извън тях
+  
+  // Скрий резултатите при клик навън
   document.addEventListener('click', function(e) {
     if (!addressInput.contains(e.target) && !resultsContainer.contains(e.target)) {
       resultsContainer.style.display = 'none';
@@ -77,110 +72,75 @@ function initAutocomplete() {
   });
 }
 
-async function searchAddresses(query) {
-  try {
-    // Използваме алтернативен геокодинг услуга, която позволява CORS
-    const url = `https://geocode.maps.co/search?q=${encodeURIComponent(query)}, Русе, България`;
+function searchWithGeocoder(query, resultsContainer) {
+  console.log("Търся с Leaflet Geocoder:", query);
+  
+  geocoder.geocode(query, function(results) {
+    console.log("Резултати от Leaflet Geocoder:", results);
     
-    console.log("Търся адрес:", query);
-    console.log("Пращам заявка към geocode.maps.co");
-    
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP грешка! статус: ${response.status}`);
+    if (!results || results.length === 0) {
+      resultsContainer.style.display = 'none';
+      return;
     }
     
-    const data = await response.json();
-    console.log("Успешно намерени резултати:", data);
-    return data;
+    // Филтрирай само резултати в/близо до Русе
+    const filteredResults = results.filter(result => {
+      const name = result.name.toLowerCase();
+      return name.includes('русе') || name.includes('ruse') || 
+             (result.center && isNearRuse(result.center.lat, result.center.lng));
+    });
     
-  } catch (error) {
-    console.error("Грешка при търсене на адреси:", error);
-    throw error;
-  }
+    displayGeocoderResults(filteredResults, resultsContainer);
+  });
 }
 
-function displayAutocompleteResults(results) {
-  const resultsContainer = document.getElementById('autocomplete-results');
-  console.log("Displaying results:", results); // ✅ ДОБАВИ ТОВА
-  
-  if (!results || results.length === 0) {
-    console.log("Няма резултати за показване");
-    resultsContainer.style.display = 'none';
-    return;
-  }
+function isNearRuse(lat, lng) {
+  // Проверка дали координатите са в/близо до Русе
+  const ruseLat = 43.8356;
+  const ruseLng = 25.9657;
+  const distance = Math.sqrt(Math.pow(lat - ruseLat, 2) + Math.pow(lng - ruseLng, 2));
+  return distance < 0.5; // ~50km радиус
+}
 
+function displayGeocoderResults(results, resultsContainer) {
   resultsContainer.innerHTML = '';
   
   results.forEach((result, index) => {
     const item = document.createElement('div');
-    item.className = 'autocomplete-item';
-    item.style.padding = '12px';
-    item.style.borderBottom = '1px solid #334155';
-    item.style.cursor = 'pointer';
-    
-    // По-просто форматиране на адреса
-    const displayName = result.display_name || 'Неименуван адрес';
-    const shortName = displayName.split(',')[0] + ', ' + displayName.split(',')[1];
-    
-    item.innerHTML = `
-      <div style="font-weight: bold; color: white;">${shortName}</div>
-      <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">${displayName}</div>
-    `;
+    item.className = 'search-item';
+    item.innerHTML = result.name || 'Неименуван адрес';
     
     item.addEventListener('click', () => {
-      console.log("Избран адрес:", result); // ✅ ДОБАВИ ТОВА
-      selectAddress(result);
-    });
-    
-    // Добави hover ефект
-    item.addEventListener('mouseenter', () => {
-      item.style.background = 'rgba(59, 130, 246, 0.2)';
-    });
-    item.addEventListener('mouseleave', () => {
-      item.style.background = '';
+      selectGeocoderResult(result);
     });
     
     resultsContainer.appendChild(item);
   });
   
   resultsContainer.style.display = 'block';
-  console.log("Показвам autocomplete резултати"); // ✅ ДОБАВИ ТОВА
 }
 
-function selectAddress(result) {
+function selectGeocoderResult(result) {
   const addressInput = document.getElementById('address');
-  const resultsContainer = document.getElementById('autocomplete-results');
+  const resultsContainer = document.getElementById('search-results');
   
-  // geocode.maps.co има различна структура
-  const displayName = result.display_name || 'Неименуван адрес';
-  const lat = parseFloat(result.lat);
-  const lon = parseFloat(result.lon);
+  console.log("Избран резултат:", result);
   
-  console.log("Избран адрес:", displayName, "Координати:", lat, lon);
-  
-  // Постави адреса в полето
-  addressInput.value = displayName;
+  addressInput.value = result.name;
   resultsContainer.style.display = 'none';
   
-  // Премести картата и маркера
   if (window.map && window.marker) {
-    window.map.setView([lat, lon], 17);
-    window.marker.setLatLng([lat, lon]);
+    const lat = result.center.lat;
+    const lng = result.center.lng;
     
-    // Обнови координатите и адреса
+    window.map.setView([lat, lng], 17);
+    window.marker.setLatLng([lat, lng]);
+    
     document.getElementById('coordsDisplay').textContent = 
-      `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-    document.getElementById('addressDisplay').textContent = displayName;
+      `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    document.getElementById('addressDisplay').textContent = result.name;
     
-    console.log("Картата е преместена успешно");
-  } else {
-    console.error("Картата или маркерът не са инициализирани");
+    console.log("Картата преместена към:", result.name);
   }
 }
 

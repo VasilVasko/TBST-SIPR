@@ -12,7 +12,7 @@
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- Добави тези за autocomplete -->
+  <!-- Leaflet Geocoder -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
   <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.min.js"></script>
 </head>
@@ -29,13 +29,9 @@
       <textarea id="problem" placeholder="Опишете кратко и ясно..." rows="5"></textarea>
 
       <div class="row">
-        <div class="col">
-          <label for="address">Адрес / квартал (по желание):</label>
-          <input id="address" type="text" placeholder="ж.к. Ялта, Русе или ул. Александровска 10"
-          autocomplete="off"
-          style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #64748b; background: rgba(15, 23, 42, 0.9); color: white;"/>
-          <div id="autocomplete-results"
-          style="position: absolute; top: 100%; left: 0; right: 0; background: #0f172a; border: 1px solid #3b82f6; border-radius: 8px; z-index: 10000; display: none;"></div>
+        <div class="search-container">
+          <input id="address" type="text" placeholder="Търси адрес в Русе..." autocomplete="off"/>
+          <div id="search-results" class="search-results"></div>
         </div>
         <div class="col buttons">
           <button id="geocodeBtn" class="btn btn-secondary">Намери на картата</button>
