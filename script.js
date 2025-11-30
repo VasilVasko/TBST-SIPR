@@ -78,19 +78,31 @@ function initAutocomplete() {
 }
 
 async function searchAddresses(query) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Русе, България&limit=5&addressdetails=1`;
-  
-  const response = await fetch(url, {
-    headers: {
-      'Accept': 'application/json',
-      'User-Agent': 'MunicipalApp/1.0'
+  try {
+    // Използваме алтернативен геокодинг услуга, която позволява CORS
+    const url = `https://geocode.maps.co/search?q=${encodeURIComponent(query)}, Русе, България`;
+    
+    console.log("Търся адрес:", query);
+    console.log("Пращам заявка към geocode.maps.co");
+    
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP грешка! статус: ${response.status}`);
     }
-  });
-  
-  if (!response.ok) throw new Error('Search failed');
-  
-  const data = await response.json();
-  return data;
+    
+    const data = await response.json();
+    console.log("Успешно намерени резултати:", data);
+    return data;
+    
+  } catch (error) {
+    console.error("Грешка при търсене на адреси:", error);
+    throw error;
+  }
 }
 
 function displayAutocompleteResults(results) {
@@ -145,14 +157,18 @@ function selectAddress(result) {
   const addressInput = document.getElementById('address');
   const resultsContainer = document.getElementById('autocomplete-results');
   
-  // Постави целия адрес в полето
-  addressInput.value = result.display_name;
-  resultsContainer.style.display = 'none';
-  
-  // Премести картата и маркера
+  // geocode.maps.co има различна структура
+  const displayName = result.display_name || 'Неименуван адрес';
   const lat = parseFloat(result.lat);
   const lon = parseFloat(result.lon);
   
+  console.log("Избран адрес:", displayName, "Координати:", lat, lon);
+  
+  // Постави адреса в полето
+  addressInput.value = displayName;
+  resultsContainer.style.display = 'none';
+  
+  // Премести картата и маркера
   if (window.map && window.marker) {
     window.map.setView([lat, lon], 17);
     window.marker.setLatLng([lat, lon]);
@@ -160,7 +176,11 @@ function selectAddress(result) {
     // Обнови координатите и адреса
     document.getElementById('coordsDisplay').textContent = 
       `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-    document.getElementById('addressDisplay').textContent = result.display_name;
+    document.getElementById('addressDisplay').textContent = displayName;
+    
+    console.log("Картата е преместена успешно");
+  } else {
+    console.error("Картата или маркерът не са инициализирани");
   }
 }
 
