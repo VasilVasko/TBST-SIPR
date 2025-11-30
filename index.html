@@ -1,0 +1,85 @@
+
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SIPR</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Leaflet CSS/JS за карта -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Добави тези за autocomplete -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1 style="margin-left: 24px;">System for Infrastructure Problem Report</h1>
+    <p class="subtitle">Опишете проблема, изберете локация, получете готов сигнал</p>
+  </header>
+
+  <main class="app-main">
+    <!-- Форма -->
+    <section class="card">
+      <label for="problem">Опишете проблема (пример: „Тъмно е до училище X“):</label>
+      <textarea id="problem" placeholder="Опишете кратко и ясно..." rows="5"></textarea>
+
+      <div class="row">
+        <div class="col">
+          <label for="address">Адрес / квартал (по желание):</label>
+          <input id="address" type="text" placeholder="ж.к. Ялта, Русе или ул. Александровска 10"
+          autocomplete="off"
+          style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #64748b; background: rgba(15, 23, 42, 0.9); color: white;"/>
+          <div id="autocomplete-results"
+          style="position: absolute; top: 100%; left: 0; right: 0; background: #0f172a; border: 1px solid #3b82f6; border-radius: 8px; z-index: 10000; display: none;"></div>
+        </div>
+        <div class="col buttons">
+          <button id="geocodeBtn" class="btn btn-secondary">Намери на картата</button>
+          <button id="useCenterBtn" class="btn btn-secondary">Пин в центъра</button>
+        </div>
+      </div>
+
+      <div id="map" class="map"></div>
+
+      <div class="info-display">
+        <p><strong>Координати:</strong> <span id="coordsDisplay">—</span></p>
+        <p><strong>Адрес:</strong> <span id="addressDisplay">—</span></p>
+      </div>
+
+      <div class="actions">
+        <button id="generateBtn" class="btn btn-primary" onclick="callGroqChat(problem)">Генерирай сигнал</button>
+      </div>
+    </section>
+
+    <!-- Резултат -->
+    <section class="card">
+      <h2>Резултат</h2>
+      <div class="result-row">
+        <div>
+          <h3>Категория</h3>
+          <p id="category">—</p>
+        </div>
+        <div>
+          <h3>Локация</h3>
+          <p id="coords">—</p>
+        </div>
+      </div>
+      <h3>„Готов сигнал“</h3>
+      <div id="signal" class="signal"></div>
+    </section>
+  </main>
+
+  <footer>
+    <small>vamOS</small>
+  </footer>
+
+
+  <!-- Конфигурация и логика -->
+  <script src="config.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
